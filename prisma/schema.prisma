@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Cliente {
+  idCliente     Int      @id @default(autoincrement()) @map("id_cliente")
+  cedula        String   @unique
+  nombre        String
+  direccion     String
+  telefono      String
+  email         String?
+  tipoServicio  String   @map("tipo_servicio") // "Fiber Optic" o "Radio Link"
+  estado        String   @default("activo") // "activo", "suspendido", "inactivo"
+  fechaRegistro DateTime @default(now()) @map("fecha_registro")
+
+  // Relaciones
+  facturas Factura[]
+
+  @@map("clientes")
+}
+
+model Factura {
+  idFactura        Int      @id @default(autoincrement()) @map("id_factura")
+  idCliente        Int      @map("id_cliente")
+  periodo          String   // Formato: "2024-01" (año-mes)
+  monto            Decimal  @db.Decimal(10, 2)
+  fechaEmision     DateTime @default(now()) @map("fecha_emision")
+  fechaVencimiento DateTime @map("fecha_vencimiento")
+  estadoPago       String   @default("pendiente") @map("estado_pago") // "pendiente", "pagado", "vencido"
+  referenciaPago   String?  @map("referencia_pago")
+
+  // Relaciones
+  cliente Cliente @relation(fields: [idCliente], references: [idCliente], onDelete: Cascade)
+  pagos   Pago[]
+
+  @@map("facturas")
+}
+
+model Pago {
+  idPago           Int      @id @default(autoincrement()) @map("id_pago")
+  idFactura        Int      @map("id_factura")
+  montoPagado      Decimal  @db.Decimal(10, 2) @map("monto_pagado")
+  fechaPago        DateTime @default(now()) @map("fecha_pago")
+  metodoPago       String   @map("metodo_pago") // "PSE", "Efectivo", "Transferencia"
+  estadoTransaccion String  @map("estado_transaccion") // "aprobado", "rechazado", "pendiente"
+  codigoTransaccion String? @map("codigo_transaccion")
+
+  // Relaciones
+  factura Factura @relation(fields: [idFactura], references: [idFactura], onDelete: Cascade)
+
+  @@map("pagos")
+}
+
+model UsuarioAdmin {
+  idUsuario    Int      @id @default(autoincrement()) @map("id_usuario")
+  nombre       String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  rol          String   @default("admin") // "admin", "super_admin"
+  fechaCreacion DateTime @default(now()) @map("fecha_creacion")
+  ultimoAcceso DateTime? @map("ultimo_acceso")
+
+  @@map("usuarios_admin")
+}
