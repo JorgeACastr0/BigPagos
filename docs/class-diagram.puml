@@ -1,0 +1,273 @@
+@startuml BigPagos_Backend_Class_Diagram
+
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam classBackgroundColor #F8F9FA
+skinparam classBorderColor #343A40
+skinparam classFontColor #212529
+
+package "BigPagos Backend Architecture" {
+    
+    ' ===== CONFIGURATION LAYER =====
+    package "Configuration Layer" {
+        class Config {
+            +port: number
+            +nodeEnv: string
+            +database: object
+            +jwt: object
+            +pse: object
+            +cors: object
+            +upload: object
+        }
+        
+        class SwaggerConfig {
+            +specs: object
+            +swaggerUi: object
+        }
+    }
+    
+    ' ===== DATABASE LAYER =====
+    package "Database Layer" {
+        class PrismaClient {
+            +$connect(): Promise<void>
+            +$disconnect(): Promise<void>
+            +$queryRaw(): Promise<any>
+        }
+        
+        class DatabaseModels {
+            +Cliente
+            +Factura
+            +Pago
+            +UsuarioAdmin
+        }
+    }
+    
+    ' ===== MIDDLEWARE LAYER =====
+    package "Middleware Layer" {
+        class AuthMiddleware {
+            +authenticateToken(): Function
+            +requireRole(roles): Function
+            +generateToken(user): string
+        }
+        
+        class ValidationMiddleware {
+            +handleValidationErrors(): Function
+            +asyncHandler(fn): Function
+            +requestLogger(): Function
+        }
+    }
+    
+    ' ===== UTILITIES LAYER =====
+    package "Utilities Layer" {
+        class Helpers {
+            +successResponse(): object
+            +errorResponse(): object
+            +formatDate(): string
+            +isValidCedula(): boolean
+            +isValidEmail(): boolean
+            +generatePaymentReference(): string
+            +handleDatabaseError(): string
+        }
+    }
+    
+    ' ===== SERVICES LAYER =====
+    package "Services Layer" {
+        class AuthService {
+            +registerAdmin(adminData): Promise<object>
+            +loginAdmin(email, password): Promise<object>
+            +getProfile(userId): Promise<object>
+            +changePassword(userId, currentPassword, newPassword): Promise<object>
+        }
+        
+        class ClienteService {
+            +getAllClientes(page, limit, search): Promise<object>
+            +getClienteById(idCliente): Promise<object>
+            +getClienteByCedula(cedula): Promise<object>
+            +createCliente(clienteData): Promise<object>
+            +updateCliente(idCliente, clienteData): Promise<object>
+            +deleteCliente(idCliente): Promise<object>
+            +getClientesStats(): Promise<object>
+        }
+        
+        class FacturaService {
+            +getAllFacturas(page, limit, filters): Promise<object>
+            +getFacturaById(idFactura): Promise<object>
+            +getFacturasPendientesByCliente(idCliente): Promise<object>
+            +createFactura(facturaData): Promise<object>
+            +generateFacturasMasivas(periodo, fechaVencimiento): Promise<object>
+            +updateEstadoPago(idFactura, estadoPago): Promise<object>
+            +getFacturasStats(): Promise<object>
+        }
+        
+        class PagoService {
+            +getAllPagos(page, limit, filters): Promise<object>
+            +getPagoById(idPago): Promise<object>
+            +getPagosByFactura(idFactura): Promise<object>
+            +createPago(pagoData): Promise<object>
+            +updateEstadoTransaccion(idPago, estadoTransaccion, codigoTransaccion): Promise<object>
+            +verificarPagoPorCodigo(codigoTransaccion): Promise<object>
+            +getPagosStats(): Promise<object>
+        }
+        
+        class PSEService {
+            +crearIntencionPago(facturaData): Promise<object>
+            +verificarEstadoTransaccion(transactionId): Promise<object>
+            +procesarWebhookConfirmacion(webhookData): Promise<object>
+            +obtenerBancosPSE(): Promise<object>
+            +generarFirma(monto, referencia): string
+            +verificarFirmaWebhook(webhookData): boolean
+            +mapearEstadoTransaccion(responseCode): string
+        }
+    }
+    
+    ' ===== CONTROLLERS LAYER =====
+    package "Controllers Layer" {
+        class AuthController {
+            +register(): Function
+            +login(): Function
+            +getProfile(): Function
+            +changePassword(): Function
+        }
+        
+        class ClienteController {
+            +getAllClientes(): Function
+            +getClienteById(): Function
+            +getClienteByCedula(): Function
+            +createCliente(): Function
+            +updateCliente(): Function
+            +deleteCliente(): Function
+            +getClientesStats(): Function
+        }
+        
+        class FacturaController {
+            +getAllFacturas(): Function
+            +getFacturaById(): Function
+            +getFacturasPendientesByCliente(): Function
+            +createFactura(): Function
+            +generateFacturasMasivas(): Function
+            +updateEstadoPago(): Function
+            +getFacturasStats(): Function
+        }
+        
+        class PagoController {
+            +getAllPagos(): Function
+            +getPagoById(): Function
+            +getPagosByFactura(): Function
+            +createPago(): Function
+            +updateEstadoTransaccion(): Function
+            +verificarPagoPorCodigo(): Function
+            +getPagosStats(): Function
+        }
+        
+        class WebhookController {
+            +pseResponse(): Function
+            +pseConfirmation(): Function
+            +createPaymentIntent(): Function
+            +getBanks(): Function
+            +verifyTransaction(): Function
+        }
+    }
+    
+    ' ===== ROUTES LAYER =====
+    package "Routes Layer" {
+        class AuthRoutes {
+            +POST /api/auth/register
+            +POST /api/auth/login
+            +GET /api/auth/profile
+            +PUT /api/auth/change-password
+        }
+        
+        class ClienteRoutes {
+            +GET /api/clientes
+            +GET /api/clientes/:id
+            +GET /api/clientes/cedula/:cedula
+            +POST /api/clientes
+            +PUT /api/clientes/:id
+            +DELETE /api/clientes/:id
+            +GET /api/clientes/stats/overview
+        }
+        
+        class FacturaRoutes {
+            +GET /api/facturas
+            +GET /api/facturas/:id
+            +GET /api/facturas/cliente/:idCliente/pendientes
+            +POST /api/facturas
+            +POST /api/facturas/generate-masivas
+            +PUT /api/facturas/:id/estado-pago
+            +GET /api/facturas/stats/overview
+        }
+        
+        class PagoRoutes {
+            +GET /api/pagos
+            +GET /api/pagos/:id
+            +GET /api/pagos/factura/:idFactura
+            +POST /api/pagos
+            +PUT /api/pagos/:id/estado-transaccion
+            +GET /api/pagos/verificar/:codigoTransaccion
+            +GET /api/pagos/stats/overview
+        }
+        
+        class WebhookRoutes {
+            +POST /api/webhook/pse/response
+            +POST /api/webhook/pse/confirmation
+            +POST /api/webhook/pse/create-payment
+            +GET /api/webhook/pse/banks
+            +GET /api/webhook/pse/verify/:transactionId
+        }
+    }
+    
+    ' ===== MAIN APPLICATION =====
+    class ExpressApp {
+        +app: Express
+        +middleware: object
+        +routes: object
+        +startServer(): void
+    }
+}
+
+' ===== RELATIONSHIPS =====
+AuthController --> AuthService
+ClienteController --> ClienteService
+FacturaController --> FacturaService
+PagoController --> PagoService
+WebhookController --> PSEService
+
+AuthService --> PrismaClient
+ClienteService --> PrismaClient
+FacturaService --> PrismaClient
+PagoService --> PrismaClient
+PSEService --> PrismaClient
+
+AuthController --> AuthMiddleware
+ClienteController --> AuthMiddleware
+FacturaController --> AuthMiddleware
+PagoController --> AuthMiddleware
+
+AuthController --> ValidationMiddleware
+ClienteController --> ValidationMiddleware
+FacturaController --> ValidationMiddleware
+PagoController --> ValidationMiddleware
+WebhookController --> ValidationMiddleware
+
+AuthService --> Helpers
+ClienteService --> Helpers
+FacturaService --> Helpers
+PagoService --> Helpers
+
+ExpressApp --> AuthRoutes
+ExpressApp --> ClienteRoutes
+ExpressApp --> FacturaRoutes
+ExpressApp --> PagoRoutes
+ExpressApp --> WebhookRoutes
+
+AuthRoutes --> AuthController
+ClienteRoutes --> ClienteController
+FacturaRoutes --> FacturaController
+PagoRoutes --> PagoController
+WebhookRoutes --> WebhookController
+
+ExpressApp --> Config
+ExpressApp --> SwaggerConfig
+ExpressApp --> PrismaClient
+
+@enduml

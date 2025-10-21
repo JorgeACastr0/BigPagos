@@ -1,0 +1,127 @@
+@startuml BigPagos_Database_ERD
+
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam entityBackgroundColor #E3F2FD
+skinparam entityBorderColor #1976D2
+skinparam entityFontColor #0D47A1
+
+title BigPagos Database - Entity Relationship Diagram
+
+' ===== ENTITIES =====
+
+entity "clientes" {
+  * id_cliente : INT <<PK>>
+  --
+  * cedula : VARCHAR(12) <<UK>>
+  * nombre : VARCHAR(100)
+  * direccion : VARCHAR(200)
+  * telefono : VARCHAR(15)
+  email : VARCHAR(100)
+  * tipo_servicio : ENUM('Fiber Optic', 'Radio Link')
+  * estado : ENUM('activo', 'suspendido', 'inactivo')
+  * fecha_registro : TIMESTAMP
+}
+
+entity "facturas" {
+  * id_factura : INT <<PK>>
+  --
+  * id_cliente : INT <<FK>>
+  * periodo : VARCHAR(7)
+  * monto : DECIMAL(10,2)
+  * fecha_emision : TIMESTAMP
+  * fecha_vencimiento : TIMESTAMP
+  * estado_pago : ENUM('pendiente', 'pagado', 'vencido')
+  referencia_pago : VARCHAR(50)
+}
+
+entity "pagos" {
+  * id_pago : INT <<PK>>
+  --
+  * id_factura : INT <<FK>>
+  * monto_pagado : DECIMAL(10,2)
+  * fecha_pago : TIMESTAMP
+  * metodo_pago : ENUM('PSE', 'Efectivo', 'Transferencia')
+  * estado_transaccion : ENUM('aprobado', 'rechazado', 'pendiente')
+  codigo_transaccion : VARCHAR(100)
+}
+
+entity "usuarios_admin" {
+  * id_usuario : INT <<PK>>
+  --
+  * nombre : VARCHAR(100)
+  * email : VARCHAR(100) <<UK>>
+  * password_hash : VARCHAR(255)
+  * rol : ENUM('admin', 'super_admin')
+  * fecha_creacion : TIMESTAMP
+  ultimo_acceso : TIMESTAMP
+}
+
+' ===== RELATIONSHIPS =====
+
+clientes ||--o{ facturas : "tiene"
+facturas ||--o{ pagos : "recibe"
+
+' ===== INDEXES =====
+
+note right of clientes
+  **Índices:**
+  - PRIMARY KEY: id_cliente
+  - UNIQUE: cedula
+  - INDEX: email
+  - INDEX: estado
+end note
+
+note right of facturas
+  **Índices:**
+  - PRIMARY KEY: id_factura
+  - FOREIGN KEY: id_cliente
+  - INDEX: periodo
+  - INDEX: estado_pago
+  - INDEX: fecha_emision
+  - UNIQUE: (id_cliente, periodo)
+end note
+
+note right of pagos
+  **Índices:**
+  - PRIMARY KEY: id_pago
+  - FOREIGN KEY: id_factura
+  - INDEX: codigo_transaccion
+  - INDEX: estado_transaccion
+  - INDEX: fecha_pago
+end note
+
+note right of usuarios_admin
+  **Índices:**
+  - PRIMARY KEY: id_usuario
+  - UNIQUE: email
+  - INDEX: rol
+end note
+
+' ===== BUSINESS RULES =====
+
+note as N1
+  **Reglas de Negocio:**
+  
+  1. **Clientes:**
+     - Cédula única en el sistema
+     - Email opcional pero único si se proporciona
+     - Solo clientes activos pueden tener facturas
+  
+  2. **Facturas:**
+     - Una factura por cliente por período
+     - Monto siempre positivo
+     - Fecha de vencimiento > fecha de emisión
+  
+  3. **Pagos:**
+     - Un pago puede ser de múltiples facturas (futuro)
+     - Código de transacción único por pago PSE
+     - Estado de transacción determina estado de factura
+  
+  4. **Usuarios Admin:**
+     - Email único en el sistema
+     - Contraseña hasheada con bcrypt
+     - Roles jerárquicos (super_admin > admin)
+end note
+
+@enduml

@@ -1,0 +1,179 @@
+@startuml BigPagos_System_Architecture
+
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam componentBackgroundColor #E8F5E8
+skinparam componentBorderColor #2E7D32
+skinparam componentFontColor #1B5E20
+
+title BigPagos System Architecture
+
+' ===== EXTERNAL SYSTEMS =====
+package "External Systems" {
+  [ePayco Gateway] as EPayco
+  [PlacetoPay Gateway] as PlacetoPay
+  [Supabase Database] as Supabase
+  [Client Mobile App] as MobileApp
+  [Admin Web Portal] as WebPortal
+}
+
+' ===== LOAD BALANCER & GATEWAY =====
+package "Infrastructure Layer" {
+  [Nginx Load Balancer] as Nginx
+  [API Gateway] as Gateway
+}
+
+' ===== APPLICATION LAYER =====
+package "Application Layer" {
+  package "BigPagos Backend API" {
+    [Express.js Server] as ExpressServer
+    [Swagger Documentation] as Swagger
+    
+    package "Middleware" {
+      [CORS] as CORS
+      [Helmet Security] as Helmet
+      [JWT Auth] as JWTAuth
+      [Validation] as Validation
+      [Error Handling] as ErrorHandler
+    }
+    
+    package "Routes" {
+      [Auth Routes] as AuthRoutes
+      [Client Routes] as ClientRoutes
+      [Invoice Routes] as InvoiceRoutes
+      [Payment Routes] as PaymentRoutes
+      [Webhook Routes] as WebhookRoutes
+    }
+    
+    package "Controllers" {
+      [Auth Controller] as AuthController
+      [Client Controller] as ClientController
+      [Invoice Controller] as InvoiceController
+      [Payment Controller] as PaymentController
+      [Webhook Controller] as WebhookController
+    }
+    
+    package "Services" {
+      [Auth Service] as AuthService
+      [Client Service] as ClientService
+      [Invoice Service] as InvoiceService
+      [Payment Service] as PaymentService
+      [PSE Service] as PSEService
+    }
+    
+    package "Utilities" {
+      [Helpers] as Helpers
+      [Validators] as Validators
+      [Response Formatters] as ResponseFormatters
+    }
+  }
+}
+
+' ===== DATA LAYER =====
+package "Data Layer" {
+  [Prisma ORM] as Prisma
+  [Database Models] as Models
+  [Migrations] as Migrations
+}
+
+' ===== DATABASE =====
+package "Database Layer" {
+  database "PostgreSQL" {
+    [clientes] as ClientesTable
+    [facturas] as FacturasTable
+    [pagos] as PagosTable
+    [usuarios_admin] as AdminTable
+  }
+}
+
+' ===== CONNECTIONS =====
+
+' External to Infrastructure
+MobileApp --> Nginx : HTTPS
+WebPortal --> Nginx : HTTPS
+EPayco --> Gateway : Webhook
+PlacetoPay --> Gateway : Webhook
+
+' Infrastructure to Application
+Nginx --> Gateway : Load Balance
+Gateway --> ExpressServer : Route
+
+' Application Internal Flow
+ExpressServer --> CORS
+CORS --> Helmet
+Helmet --> JWTAuth
+JWTAuth --> Validation
+Validation --> ErrorHandler
+
+ExpressServer --> AuthRoutes
+ExpressServer --> ClientRoutes
+ExpressServer --> InvoiceRoutes
+ExpressServer --> PaymentRoutes
+ExpressServer --> WebhookRoutes
+
+AuthRoutes --> AuthController
+ClientRoutes --> ClientController
+InvoiceRoutes --> InvoiceController
+PaymentRoutes --> PaymentController
+WebhookRoutes --> WebhookController
+
+AuthController --> AuthService
+ClientController --> ClientService
+InvoiceController --> InvoiceService
+PaymentController --> PaymentService
+WebhookController --> PSEService
+
+AuthService --> Prisma
+ClientService --> Prisma
+InvoiceService --> Prisma
+PaymentService --> Prisma
+PSEService --> EPayco
+PSEService --> PlacetoPay
+
+' Data Layer
+Prisma --> Models
+Models --> Migrations
+Prisma --> Supabase
+
+' Database
+Supabase --> ClientesTable
+Supabase --> FacturasTable
+Supabase --> PagosTable
+Supabase --> AdminTable
+
+' Documentation
+ExpressServer --> Swagger
+
+' ===== NOTES =====
+note right of ExpressServer
+  **Puerto:** 3000
+  **Entorno:** Development/Production
+  **Logs:** Console + File
+end note
+
+note right of Supabase
+  **Tipo:** PostgreSQL
+  **Hosting:** Supabase Cloud
+  **Backup:** Automático
+  **SSL:** Habilitado
+end note
+
+note right of EPayco
+  **Tipo:** PSE Gateway
+  **Ambiente:** Sandbox/Production
+  **Webhooks:** Configurados
+end note
+
+note right of MobileApp
+  **Tecnología:** React Native
+  **Plataforma:** iOS/Android
+  **Autenticación:** JWT
+end note
+
+note right of WebPortal
+  **Tecnología:** React.js
+  **Autenticación:** JWT
+  **Rol:** Admin/Super Admin
+end note
+
+@enduml
